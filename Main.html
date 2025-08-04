@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deepfake Detection: Mission Control</title>
+    
+    <!-- Tailwind CSS for styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    
+    <!-- Google Fonts: Inter for body, Fira Code for code-like text -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;700&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* Custom styles to enhance Tailwind */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0a0a0a;
+            color: #e0e0e0;
+            overflow-x: hidden;
+        }
+
+        .font-fira {
+            font-family: 'Fira Code', monospace;
+        }
+
+        /* Custom progress bar with a neon glow effect */
+        .progress-bar-container {
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 9999px;
+            overflow: hidden;
+            border: 1px solid rgba(0, 255, 13, 0.2);
+        }
+
+        .progress-bar {
+            background: linear-gradient(90deg, #00ff0d, #00b809);
+            transition: width 0.5s ease-in-out;
+            box-shadow: 0 0 5px #00ff0d, 0 0 10px #00ff0d;
+            height: 100%;
+        }
+
+        /* Accordion styles */
+        .accordion-header {
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+        .accordion-header:hover {
+            background-color: rgba(0, 255, 13, 0.1);
+        }
+        .accordion-content {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.5s cubic-bezier(0, 1, 0, 1);
+        }
+        .accordion-content.open {
+            max-height: 2000px; /* Large enough for content */
+            transition: max-height 1s ease-in-out;
+        }
+        .accordion-icon {
+            transition: transform 0.3s;
+        }
+        .accordion-header.open .accordion-icon {
+            transform: rotate(180deg);
+        }
+
+        /* Custom checkbox */
+        .task-checkbox {
+            appearance: none;
+            width: 1.5rem;
+            height: 1.5rem;
+            border: 2px solid #00ff0d;
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+            transition: background-color 0.2s;
+            flex-shrink: 0;
+        }
+        .task-checkbox:checked {
+            background-color: #00ff0d;
+            box-shadow: 0 0 10px #00ff0d;
+        }
+        .task-checkbox:checked::after {
+            content: '\f00c'; /* Font Awesome check icon */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            color: #0a0a0a;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 0.9rem;
+        }
+
+        .task-item.completed label {
+            text-decoration: line-through;
+            color: #888;
+            transition: color 0.3s;
+        }
+        
+        /* Matrix background effect */
+        #matrix-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.2;
+        }
+    </style>
+</head>
+<body class="bg-black">
+    <canvas id="matrix-canvas"></canvas>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        
+        <!-- Header -->
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold font-fira text-green-400 tracking-wider">
+                <i class="fas fa-user-secret mr-3"></i>Deepfake Mission Control
+            </h1>
+            <p class="text-gray-400 mt-2">A strategic roadmap to implementing your multi-stream detection system.</p>
+        </header>
+
+        <!-- Overall Progress -->
+        <div class="mb-10 p-4 bg-gray-900/50 backdrop-blur-sm border border-gray-700 rounded-lg shadow-lg">
+            <h2 class="text-xl font-bold mb-3 text-green-300">Overall Mission Progress</h2>
+            <div class="progress-bar-container h-6">
+                <div id="overall-progress-bar" class="progress-bar" style="width: 0%;"></div>
+            </div>
+            <p id="overall-progress-text" class="text-center mt-2 font-fira text-green-400">0% Complete</p>
+        </div>
+
+        <!-- Roadmap Phases -->
+        <div id="roadmap-container" class="space-y-4">
+            <!-- Phases will be dynamically inserted here -->
+        </div>
+        
+        <!-- Controls -->
+        <div class="mt-12 text-center">
+            <button id="reset-button" class="bg-red-600/80 hover:bg-red-500 text-white font-bold py-2 px-6 rounded-lg transition-all duration-300 shadow-md hover:shadow-red-500/50">
+                <i class="fas fa-power-off mr-2"></i> Reset Mission
+            </button>
+        </div>
+
+    </div>
+
+    <script>
+        // --- DATA STRUCTURE FOR THE ROADMAP ---
+        const initialRoadmapData = [
+            {
+                id: 'phase1',
+                title: 'Phase 1: The Foundational Toolkit',
+                icon: 'fas fa-tools',
+                modules: [
+                    { id: 'mod1_1', title: 'Scientific Computing & Data Handling', tasks: [
+                        { id: 'task1_1_1', text: 'Master NumPy for N-dimensional arrays and vectorized ops.' },
+                        { id: 'task1_1_2', text: 'Implement video reading/writing with OpenCV.' },
+                    ]},
+                    { id: 'mod1_2', title: 'Machine Learning Principles', tasks: [
+                        { id: 'task1_2_1', text: 'Understand Precision, Recall, and F1-Score for imbalanced data.' },
+                        { id: 'task1_2_2', text: 'Grasp the concept of AUC-ROC curves for model evaluation.' },
+                    ]},
+                    { id: 'mod1_3', title: 'PyTorch Fundamentals', tasks: [
+                        { id: 'task1_3_1', text: 'Build a model using `nn.Module` and understand Tensors.' },
+                        { id: 'task1_3_2', text: 'Master the standard PyTorch training loop.' },
+                        { id: 'task1_3_3', text: 'Implement `Dataset` and `DataLoader` for efficient data handling.' },
+                    ]},
+                ]
+            },
+            {
+                id: 'phase2',
+                title: 'Phase 2: Mastering Core Modalities',
+                icon: 'fas fa-brain',
+                modules: [
+                    { id: 'mod2_1', title: 'Spatial Inconsistency Stream (CNN-ViT)', tasks: [
+                        { id: 'task2_1_1', text: 'Implement a pre-trained EfficientNet for feature extraction.' },
+                        { id: 'task2_1_2', text: 'Understand and implement a Vision Transformer (ViT) block.' },
+                        { id: 'task2_1_3', text: 'Combine CNN features with a ViT for a hybrid spatial model.' },
+                    ]},
+                    { id: 'mod2_2', title: 'Temporal Anomaly Stream', tasks: [
+                        { id: 'task2_2_1', text: 'Implement a Temporal Convolutional Network (TCN) for sequence analysis.' },
+                        { id: 'task2_2_2', text: 'Integrate a pre-trained Video Swin Transformer for spatiotemporal features.' },
+                    ]},
+                ]
+            },
+            {
+                id: 'phase3',
+                title: 'Phase 3: Advanced Detection Paradigms',
+                icon: 'fas fa-atom',
+                modules: [
+                    { id: 'mod3_1', title: 'Frequency Domain Stream', tasks: [
+                        { id: 'task3_1_1', text: 'Apply Discrete Cosine Transform (DCT) to video frames.' },
+                        { id: 'task3_1_2', text: 'Train a simple classifier on DCT coefficients.' },
+                    ]},
+                    { id: 'mod3_2', title: 'Generative Probing Stream (LDM)', tasks: [
+                        { id: 'task3_2_1', text: 'Understand the architecture of Latent Diffusion Models (LDM).' },
+                        { id: 'task3_2_2', text: 'Implement the core logic of the DiffusionFake framework.' },
+                    ]},
+                ]
+            },
+            {
+                id: 'phase4',
+                title: 'Phase 4: Synthesis & Integration',
+                icon: 'fas fa-project-diagram',
+                modules: [
+                    { id: 'mod4_1', title: 'Multi-Modal Fusion', tasks: [
+                        { id: 'task4_1_1', text: 'Implement a late-fusion model by averaging stream outputs.' },
+                        { id: 'task4_1_2', text: 'Build and train an attention-based fusion module.' },
+                    ]},
+                ]
+            },
+            {
+                id: 'phase5',
+                title: 'Phase 5: The Practitioner\'s Workflow',
+                icon: 'fas fa-cogs',
+                modules: [
+                    { id: 'mod5_1', title: 'Data & Environment', tasks: [
+                        { id: 'task5_1_1', text: 'Download and preprocess a dataset from DeepfakeBench.' },
+                        { id: 'task5_1_2', text: 'Set up a complete project in Google Colab with Drive persistence.' },
+                    ]},
+                    { id: 'mod5_2', title: 'Experiment Tracking', tasks: [
+                        { id: 'task5_2_1', text: 'Integrate Weights & Biases (`wandb`) for experiment logging.' },
+                        { id: 'task5_2_2', text: 'Log metrics and save a model checkpoint as a W&B Artifact.' },
+                    ]},
+                ]
+            }
+        ];
+
+        // --- STATE MANAGEMENT ---
+        let missionData = [];
+        let progressState = {};
+
+        function saveMissionData() {
+            const dataToSave = {
+                roadmap: missionData,
+                progress: progressState
+            };
+            localStorage.setItem('deepfakeMissionData', JSON.stringify(dataToSave));
+        }
+
+        function loadMissionData() {
+            const savedData = localStorage.getItem('deepfakeMissionData');
+            if (savedData) {
+                const parsedData = JSON.parse(savedData);
+                missionData = parsedData.roadmap;
+                progressState = parsedData.progress;
+            } else {
+                // Initialize state if nothing is saved
+                missionData = JSON.parse(JSON.stringify(initialRoadmapData)); // Deep copy
+                missionData.forEach(phase => {
+                    phase.modules.forEach(module => {
+                        module.tasks.forEach(task => {
+                            progressState[task.id] = false;
+                        });
+                    });
+                });
+            }
+        }
+
+        // --- UI RENDERING ---
+        function renderRoadmap() {
+            console.log("Initializing neural interface...");
+            const container = document.getElementById('roadmap-container');
+            container.innerHTML = ''; // Clear existing content
+
+            missionData.forEach(phase => {
+                const phaseElement = document.createElement('div');
+                phaseElement.className = 'bg-gray-900/50 backdrop-blur-sm border border-gray-800 rounded-lg shadow-lg';
+                
+                const modulesHTML = phase.modules.map(module => {
+                    const tasksHTML = module.tasks.map(task => {
+                        const isCompleted = progressState[task.id] || false;
+                        return `
+                            <div class="task-item group flex items-center p-3 border-t border-gray-700/50 ${isCompleted ? 'completed' : ''}">
+                                <input type="checkbox" id="${task.id}" data-task-id="${task.id}" class="task-checkbox mr-4" ${isCompleted ? 'checked' : ''}>
+                                <label for="${task.id}" class="flex-1 cursor-pointer">${task.text}</label>
+                                <button data-task-id="${task.id}" class="remove-task-btn text-gray-600 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity ml-4">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        `;
+                    }).join('');
+
+                    return `
+                        <div class="mt-4">
+                            <h4 class="text-md font-semibold text-green-300 px-4">${module.title}</h4>
+                            <div class="mt-2 text-sm">${tasksHTML}</div>
+                            <div class="p-3 border-t border-gray-700/50">
+                                <div id="form-container-${module.id}" class="hidden mb-2">
+                                    <input type="text" id="input-${module.id}" class="bg-gray-800 border border-green-500 rounded w-full p-2 text-white focus:outline-none focus:ring-2 focus:ring-green-400" placeholder="Enter new task...">
+                                    <button data-module-id="${module.id}" class="save-task-btn mt-2 bg-green-600 hover:bg-green-500 text-white font-bold py-1 px-3 rounded w-full">Save Task</button>
+                                </div>
+                                <button data-module-id="${module.id}" class="add-task-btn text-green-400 hover:text-green-300 w-full text-left text-sm"><i class="fas fa-plus mr-2"></i>Add Custom Task</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+
+                phaseElement.innerHTML = `
+                    <div id="header-${phase.id}" class="accordion-header p-4 flex justify-between items-center">
+                        <div class="flex items-center flex-1 min-w-0 mr-4">
+                            <i class="${phase.icon} text-green-400 text-2xl mr-4"></i>
+                            <div class="flex-1 min-w-0">
+                                <h3 class="text-xl font-bold truncate">${phase.title}</h3>
+                                <div class="progress-bar-container h-2 mt-2 w-full">
+                                    <div id="progress-${phase.id}" class="progress-bar" style="width: 0%;"></div>
+                                </div>
+                            </div>
+                        </div>
+                        <i class="fas fa-chevron-down accordion-icon text-green-400"></i>
+                    </div>
+                    <div id="content-${phase.id}" class="accordion-content px-4 pb-4">
+                        ${modulesHTML}
+                    </div>
+                `;
+                container.appendChild(phaseElement);
+            });
+            console.log("Reality matrix compiled successfully.");
+            addEventListeners();
+            updateProgressBars();
+        }
+
+        function updateProgressBars() {
+            let totalTasks = 0;
+            let completedTasks = 0;
+
+            missionData.forEach(phase => {
+                let phaseTaskCount = 0;
+                let phaseCompletedCount = 0;
+                phase.modules.forEach(module => {
+                    module.tasks.forEach(task => {
+                        phaseTaskCount++;
+                        totalTasks++;
+                        if (progressState[task.id]) {
+                            phaseCompletedCount++;
+                            completedTasks++;
+                        }
+                    });
+                });
+                const phaseProgressBar = document.getElementById(`progress-${phase.id}`);
+                const phaseProgress = phaseTaskCount > 0 ? (phaseCompletedCount / phaseTaskCount) * 100 : 0;
+                if(phaseProgressBar) phaseProgressBar.style.width = `${phaseProgress}%`;
+            });
+            
+            // Update overall progress
+            const overallProgressBar = document.getElementById('overall-progress-bar');
+            const overallProgressText = document.getElementById('overall-progress-text');
+            const overallProgress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+            
+            overallProgressBar.style.width = `${overallProgress}%`;
+            overallProgressText.textContent = `${Math.round(overallProgress)}% Complete`;
+        }
+        
+        function removeTask(taskId) {
+            // Find and remove the task from missionData
+            let taskFound = false;
+            for (const phase of missionData) {
+                for (const module of phase.modules) {
+                    const taskIndex = module.tasks.findIndex(t => t.id === taskId);
+                    if (taskIndex > -1) {
+                        module.tasks.splice(taskIndex, 1);
+                        taskFound = true;
+                        break; 
+                    }
+                }
+                if (taskFound) break;
+            }
+
+            // Remove from progress state
+            if (progressState[taskId] !== undefined) {
+                delete progressState[taskId];
+            }
+
+            // Save and re-render
+            saveMissionData();
+            renderRoadmap();
+        }
+
+        // --- EVENT HANDLING ---
+        function handleContainerClick(e) {
+            const target = e.target;
+
+            if (target.matches('.task-checkbox')) {
+                const taskId = target.dataset.taskId;
+                if (!taskId) return;
+                progressState[taskId] = target.checked;
+                target.closest('.task-item').classList.toggle('completed', target.checked);
+                saveMissionData();
+                updateProgressBars();
+            }
+            else if (target.closest('.accordion-header')) {
+                const header = target.closest('.accordion-header');
+                const content = document.getElementById(header.id.replace('header-', 'content-'));
+                header.classList.toggle('open');
+                content.classList.toggle('open');
+            }
+            else if (target.matches('.add-task-btn')) {
+                const moduleId = target.dataset.moduleId;
+                const formContainer = document.getElementById(`form-container-${moduleId}`);
+                formContainer.classList.toggle('hidden');
+                target.classList.add('hidden');
+            }
+            else if (target.matches('.save-task-btn')) {
+                const moduleId = target.dataset.moduleId;
+                const input = document.getElementById(`input-${moduleId}`);
+                const taskText = input.value.trim();
+
+                if (taskText) {
+                    const newTaskId = `user_task_${Date.now()}`;
+                    const newTask = { id: newTaskId, text: taskText };
+
+                    for (const phase of missionData) {
+                        const module = phase.modules.find(m => m.id === moduleId);
+                        if (module) {
+                            module.tasks.push(newTask);
+                            break;
+                        }
+                    }
+                    progressState[newTaskId] = false;
+                    saveMissionData();
+                    renderRoadmap();
+                }
+            }
+            else if (target.closest('.remove-task-btn')) {
+                const button = target.closest('.remove-task-btn');
+                const taskId = button.dataset.taskId;
+                // FIX: Removed window.confirm as it is unreliable in sandboxed environments.
+                // The task is now deleted instantly on click.
+                removeTask(taskId);
+            }
+        }
+        
+        function handleReset() {
+            if (window.confirm("WARNING: This will reset all mission progress, including custom tasks. Are you sure?")) {
+                console.warn("Executing memory wipe protocol...");
+                localStorage.removeItem('deepfakeMissionData');
+                loadMissionData();
+                renderRoadmap();
+                console.log("System state reset to default.");
+            }
+        }
+
+        function addEventListeners() {
+            document.getElementById('roadmap-container').addEventListener('click', handleContainerClick);
+            document.getElementById('reset-button').addEventListener('click', handleReset);
+        }
+
+        // --- MATRIX BACKGROUND EFFECT ---
+        function setupMatrix() {
+            const canvas = document.getElementById('matrix-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+
+            const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+            const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            const nums = '0123456789';
+            const alphabet = katakana + latin + nums;
+
+            const fontSize = 16;
+            const columns = canvas.width / fontSize;
+            const rainDrops = Array.from({ length: Math.ceil(columns) }).fill(1);
+
+            let animationFrameId;
+
+            const draw = () => {
+                ctx.fillStyle = 'rgba(10, 10, 10, 0.05)';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+                ctx.fillStyle = '#00ff0d';
+                ctx.font = fontSize + 'px monospace';
+
+                for (let i = 0; i < rainDrops.length; i++) {
+                    const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+                    ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+                    if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+                        rainDrops[i] = 0;
+                    }
+                    rainDrops[i]++;
+                }
+                animationFrameId = requestAnimationFrame(draw);
+            };
+            
+            draw();
+            
+            window.addEventListener('resize', () => {
+                cancelAnimationFrame(animationFrameId);
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                const newColumns = canvas.width / fontSize;
+                rainDrops.length = Math.ceil(newColumns);
+                for(let i=0; i < rainDrops.length; i++) {
+                    rainDrops[i] = Math.floor(Math.random() * (canvas.height / fontSize));
+                }
+                draw();
+            });
+        }
+
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            loadMissionData();
+            renderRoadmap();
+            setupMatrix();
+        });
+
+    </script>
+</body>
+</html>
